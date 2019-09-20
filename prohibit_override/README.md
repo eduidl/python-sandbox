@@ -1,5 +1,5 @@
 ```terminal
-$ pipenv sync
+$ pipenv install
 $ pipenv shell
 
 $ mypy mypy.py
