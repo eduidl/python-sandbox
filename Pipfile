@@ -1,0 +1,24 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+flake8 = "*"
+flake8-import-order = "*"
+mypy = "*"
+parameterized = "*"
+yapf = "*"
+
+[packages]
+jupyter = {extras = ["notebook"],version = "*"}
+matplotlib = "*"
+numpy = "*"
+opencv-python = "*"
+pandas = "*"
+scikit-image = "*"
+scikit-learn = "*"
+torch = "*"
+
+[requires]
+python_version = "3.6"

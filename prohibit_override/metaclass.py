@@ -64,24 +64,30 @@ class A(metaclass=FinalMeta):
 
 
 try:
+
     class B(A):
+
         def final_member(self):
             pass
 except TypeError as e:
     print(e)
 
 try:
-    class B(A):
+
+    class C(A):
         pass
 
-    class C(B):
+    class D(C):
+
         def final_member(self):
             pass
 except TypeError as e:
     print(e)
 
 try:
-    class D(A):
+
+    class E(A):
+
         @classmethod
         def final_member(cls):
             pass
@@ -89,7 +95,9 @@ except TypeError as e:
     print(e)
 
 try:
-    class D(A):
+
+    class F(A):
+
         @classmethod
         def final_class(cls):
             pass
@@ -97,7 +105,9 @@ except TypeError as e:
     print(e)
 
 try:
-    class E(A):
+
+    class G(A):
+
         @staticmethod
         def final_static():
             pass
@@ -105,9 +115,10 @@ except TypeError as e:
     print(e)
 
 
-class F(A):
+class H(A):
+
     def overridable(self):
-        print("from F")
+        print("from H")
 
 
-F().overridable()
+H().overridable()
