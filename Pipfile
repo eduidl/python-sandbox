@@ -15,10 +15,13 @@ jupyter = {extras = ["notebook"],version = "*"}
 matplotlib = "*"
 numpy = "*"
 opencv-python = "*"
+optuna = "*"
 pandas = "*"
+pytorch-lightning = "*"
 scikit-image = "*"
 scikit-learn = "*"
 torch = "*"
+torchvision = "*"
 
 [requires]
 python_version = "3.6"
