@@ -1,14 +1,18 @@
 import inspect
+from typing import Any, Callable, Dict, List, Tuple
 
 
-def final(funcobj):
-    funcobj.__isfinalmethod__ = True
+AnyCallable = Callable[..., Any]
+
+
+def final(funcobj: AnyCallable) -> AnyCallable:
+    setattr(funcobj, '__isfinalmethod__', True)
     return funcobj
 
 
-def get_func_type(cls, func_name):
-    for ancestor in cls.__mro__:
-        func = ancestor.__dict__.get(func_name, None)
+def get_func_type(cls: type, func_name: str) -> str:
+    for ancestor in cls.mro():
+        func = getattr(ancestor, func_name, None)
         if not func:
             continue
 
@@ -19,14 +23,16 @@ def get_func_type(cls, func_name):
         else:
             return 'member function'
 
+    raise ValueError
+
 
 class FinalMeta(type):
 
-    def __new__(mcs, name, bases, attrs):
+    def __new__(mcs, name: str, bases: Tuple[Any, ...], attrs: Dict[str, Any]) -> Any:
         cls = super().__new__(mcs, name, bases, attrs)
         for func_name, func in mcs.get_methods(cls):
-            for ancestor in cls.__mro__:
-                if ancestor in [cls, object] or func_name not in cls.__dict__:
+            for ancestor in cls.mro():
+                if ancestor in [cls, object] or not hasattr(cls, func_name):
                     continue
                 ancestor_func = getattr(ancestor, func_name, None)
                 if not ancestor_func or not getattr(ancestor_func, '__isfinalmethod__', False) or \
@@ -35,90 +41,124 @@ class FinalMeta(type):
                     continue
 
                 func_type = get_func_type(ancestor, func_name)
-                raise TypeError(f'Overriding @final {func_type}: {func_name}() on definition of class {name}')
+                raise TypeError(f'Fail to declare class {name}, for override final {func_type}: {func_name}')
         return cls
 
     @staticmethod
-    def get_methods(cls):
+    def get_methods(cls: type) -> List[Tuple[str, AnyCallable]]:
         return inspect.getmembers(cls, inspect.isfunction) + inspect.getmembers(cls, inspect.ismethod)
 
 
 class A(metaclass=FinalMeta):
 
     @final
-    def final_member(self):
+    def final_member(self) -> None:
         pass
 
     @classmethod
     @final
-    def final_class(cls):
+    def final_class(cls) -> None:
         pass
 
     @staticmethod
     @final
-    def final_static():
+    def final_static() -> None:
         pass
 
-    def overridable(self):
+    def overridable(self) -> None:
         print("from A")
 
 
-try:
+class B(A):
+    pass
 
-    class B(A):
-
-        def final_member(self):
-            pass
-except TypeError as e:
-    print(e)
 
 try:
 
     class C(A):
-        pass
 
-    class D(C):
-
-        def final_member(self):
+        def final_member(self) -> None:
             pass
 except TypeError as e:
     print(e)
 
 try:
 
-    class E(A):
+    class D(B):
 
-        @classmethod
-        def final_member(cls):
+        def final_member(self) -> None:
             pass
 except TypeError as e:
     print(e)
+
 
 try:
 
-    class F(A):
+    class E(A, int):
 
-        @classmethod
-        def final_class(cls):
+        def final_member(self) -> None:
             pass
 except TypeError as e:
     print(e)
+
+
+try:
+
+    class F(int, B):
+
+        def final_member(self) -> None:
+            pass
+except TypeError as e:
+    print(e)
+
+
 
 try:
 
     class G(A):
 
-        @staticmethod
-        def final_static():
+        @classmethod
+        def final_member(cls) -> None:
             pass
 except TypeError as e:
     print(e)
 
 
-class H(A):
+try:
 
-    def overridable(self):
-        print("from H")
+    class H(A):
+
+        @staticmethod
+        def final_member() -> None:
+            pass
+except TypeError as e:
+    print(e)
+
+try:
+
+    class J(A):
+
+        @classmethod
+        def final_class(cls) -> None:
+            pass
+except TypeError as e:
+    print(e)
+
+try:
+
+    class K(A):
+
+        @staticmethod
+        def final_static() -> None:
+            pass
+except TypeError as e:
+    print(e)
 
 
-H().overridable()
+class L(A):
+
+    def overridable(self) -> None:
+        print("from L")
+
+
+L().overridable()
