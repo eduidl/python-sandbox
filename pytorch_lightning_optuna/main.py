@@ -1,13 +1,10 @@
 import optuna
 from optuna.pruners import SuccessiveHalvingPruner
-
 import pytorch_lightning as pl
-
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
-
 from torchvision import datasets, transforms
 
 BATCH_SIZE = 128

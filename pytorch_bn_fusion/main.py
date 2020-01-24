@@ -1,8 +1,7 @@
-import unittest
 from typing import Tuple
+import unittest
 
 from parameterized import parameterized  # type: ignore
-
 import torch
 from torch import nn
 
