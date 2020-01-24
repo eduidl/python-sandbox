@@ -1,33 +1,30 @@
-from copy import copy
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, List
 
-from PIL import Image, ImageDraw, ImageFont  # type: ignore
+from matplotlib import lines, patches, pyplot as plt  # type: ignore
+from PIL import Image  # type: ignore
 
-import matplotlib.pyplot as plt  # type: ignore
 
+def draw_bboxes(img: Any, bboxes: List[List[int]], labels: List[int], scores: List[float], classes: List[str]) -> None:
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-def draw_bboxes(img: Image.Image, bboxes: List[List[int]], labels: List[str], scores: List[float],
-                label2color: Dict[str, str]) -> None:
-    annotated_img = copy(img)
-
-    draw = ImageDraw.Draw(annotated_img)
-    font = ImageFont.load_default()
+    fig, ax = plt.subplots(1)
+    ax.imshow(img)
 
     assert len(bboxes) == len(labels) == len(scores)
     for bbox, label, score in zip(bboxes, labels, scores):
-        text = f'{label}: {int(100 * score)}%'
-        text_size = font.getsize(text.upper())
-        PAD = 3
-        text_location = [bbox[0] + PAD, bbox[1] - text_size[1]]
-        textbox_location = [bbox[0], text_location[1], bbox[0] + text_size[0] + PAD * 2, bbox[1]]
+        props = dict(capstyle='butt', facecolor=colors[label])
+        ax.text(bbox[0], bbox[1], f'{score:.3f}', va='top', ha='left', bbox=props)
+        rect = patches.Rectangle(bbox[:2],
+                                 bbox[2] - bbox[0],
+                                 bbox[3] - bbox[1],
+                                 linewidth=1.5,
+                                 edgecolor=colors[label],
+                                 facecolor='none')
+        ax.add_patch(rect)
 
-        draw.rectangle(xy=bbox, outline=label2color[label])
-        draw.rectangle(xy=[l + 1 for l in bbox], outline=label2color[label])
-        draw.rectangle(xy=textbox_location, fill=label2color[label])
-        draw.text(xy=text_location, text=text.upper(), fill='white', font=font)
-
-    plt.imshow(annotated_img)
+    custom_lines = [lines.Line2D([0], [0], color=c, lw=4) for c in colors]
+    plt.legend(custom_lines, classes)
     plt.show()
 
 
@@ -36,11 +33,10 @@ def main() -> None:
     img = Image.open(img_path, mode='r').convert('RGB')
 
     bboxes = [[0, 50, 90, 254], [80, 80, 254, 254]]
-    labels = ['bird', 'bird2']
+    labels = [0, 1]
     scores = [0.87, 0.23]
-    label2color = dict(bird='green', bird2='blue')
-
-    draw_bboxes(img, bboxes, labels, scores, label2color)
+    classes = ['bird1', 'bird2']
+    draw_bboxes(img, bboxes, labels, scores, classes)
 
 
 if __name__ == '__main__':
