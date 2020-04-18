@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 import optuna
 from optuna.pruners import SuccessiveHalvingPruner
 import pytorch_lightning as pl
@@ -8,6 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 BATCH_SIZE = 128
+DIR = Path(__file__).parent.resolve()
 
 
 class Net(pl.LightningModule):
@@ -54,17 +58,17 @@ class Net(pl.LightningModule):
         predicted = output.argmax(dim=1)
         return {'val_loss': F.nll_loss(output, labels), 'val_accuracy': predicted.eq(labels).float().mean()}
 
-    def validation_end(self, outputs):
+    def validation_epoch_end(self, outputs):
         loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         accuracy = torch.stack([x['val_accuracy'] for x in outputs]).mean()
         return {'val_loss': loss, 'val_accuracy': accuracy}
 
     def on_post_performance_check(self):
-        accuracy = self.trainer.tqdm_metrics['val_accuracy']
+        accuracy = self.trainer.callback_metrics['val_accuracy']
 
         self.trial.report(accuracy, self.current_epoch)
         if self.trial.should_prune(self.current_epoch):
-            raise optuna.structs.TrialPruned()
+            raise optuna.exceptions.TrialPruned()
 
     def configure_optimizers(self):
         optimizer_name = self.trial.suggest_categorical('optimizer', ['Adam', 'RMSprop', 'SGD'])
@@ -73,26 +77,37 @@ class Net(pl.LightningModule):
 
     @pl.data_loader
     def train_dataloader(self):
-        return DataLoader(datasets.MNIST('./', train=True, download=True, transform=transforms.ToTensor()),
+        return DataLoader(datasets.MNIST(DIR, train=True, download=True, transform=transforms.ToTensor()),
                           shuffle=True,
-                          batch_size=BATCH_SIZE)
+                          batch_size=BATCH_SIZE,
+                          num_workers=4)
 
     @pl.data_loader
     def val_dataloader(self):
-        return DataLoader(datasets.MNIST('./', train=False, download=True, transform=transforms.ToTensor()),
-                          batch_size=BATCH_SIZE)
+        return DataLoader(datasets.MNIST(DIR, train=False, download=True, transform=transforms.ToTensor()),
+                          batch_size=BATCH_SIZE,
+                          num_workers=4)
 
 
-def objective(trial):
-    trainer = pl.Trainer(max_nb_epochs=10)
-    model = Net(trial)
-    trainer.fit(model)
-    return trainer.tqdm_metrics['val_accuracy']
+def objective_wrapper(epochs: int):
+
+    def objective(trial):
+        trainer = pl.Trainer(max_nb_epochs=epochs)
+        model = Net(trial)
+        trainer.fit(model)
+        return trainer.callback_metrics['val_accuracy']
+
+    return objective
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--trials', type=int, default=5)
+    args = parser.parse_args()
+
     study = optuna.create_study(direction='maximize', pruner=SuccessiveHalvingPruner())
-    study.optimize(objective, n_trials=5)
+    study.optimize(objective_wrapper(args.epochs), n_trials=args.trials)
 
     print('Number of finished trials: ', len(study.trials))
 
@@ -105,7 +120,7 @@ def main():
     for key, value in trial.params.items():
         print(f'    {key}: {value}')
 
-    study.trials_dataframe().to_csv('result.csv')
+    study.trials_dataframe().to_csv(DIR / 'result.csv')
 
 
 if __name__ == '__main__':
